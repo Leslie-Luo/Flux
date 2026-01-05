@@ -44,6 +44,7 @@ Sources/
 │   └── Proxy/
 │       ├── ProxyStorageManager.swift      # 版本化存储管理
 │       ├── ChecksumVerifier.swift         # SHA256 校验
+│       ├── CLIProxyAPIReleaseSource.swift # 发布源定义 (单一来源)
 │       ├── CLIProxyAPIReleaseService.swift # GitHub Release 下载
 │       └── ManagedProxyCoordinator.swift  # 托管模式状态协调
 └── Resources/
@@ -69,6 +70,7 @@ Flux 支持两种 CLIProxyAPI 来源模式：
 
 ### 托管模式 (Managed)
 - 自动从 GitHub Releases 下载 CLIProxyAPI
+- **发布源**: `CLIProxyAPIReleaseSource.official` (router-for-me/CLIProxyAPI)
 - 版本化存储: `~/Library/Application Support/Flux/proxy/v{version}/CLIProxyAPI`
 - `current` 符号链接指向激活版本
 - 支持版本切换、更新检查、旧版本清理
@@ -124,6 +126,12 @@ open /Users/leslie/Library/Developer/Xcode/DerivedData/Flux-*/Build/Products/Deb
    - GitHub Release 获取
    - 下载进度跟踪
    - 安装/激活/删除版本
+
+6. **CLIProxyAPIReleaseSource** - 发布源定义
+   - 单一来源管理 GitHub 仓库地址
+   - `official` 常量: router-for-me/CLIProxyAPI
+   - 提供 `releasesPageURL` 和 `apiReleasesURL` 计算属性
+   - 支持自定义 host (企业 GitHub)
 
 ## 代码规范
 

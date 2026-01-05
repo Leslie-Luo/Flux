@@ -9,7 +9,7 @@ struct SettingsView: View {
     @State private var showingConfigPicker = false
     @State private var portString = ""
 
-    private let downloadURL = URL(string: "https://github.com/anthropics/claude-code-proxy/releases")!
+    private var downloadURL: URL { CLIProxyAPIReleaseSource.official.releasesPageURL }
     
     var body: some View {
         ScrollView {

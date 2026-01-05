@@ -24,6 +24,7 @@
 		91D2900EC2A5DDF00E6725B8 /* ProxyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479FF1BB963A12FAB14C8BE0 /* ProxyModels.swift */; };
 		951286CDB51E27F8611B6E92 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3B4C32D277E16CE0B067FF /* AppSettings.swift */; };
 		9D6140B19AEC78B3132E4D92 /* CLIProxyAPIDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60DA30DF1D82A14AABF4C22E /* CLIProxyAPIDiscoveryService.swift */; };
+		9F179B23FE9E231C6AB13051 /* CLIProxyAPIReleaseSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D4C0A3FCCC7009DF13E9CF /* CLIProxyAPIReleaseSource.swift */; };
 		B34416A7FF7AA2836BD5E739 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7583027CED108EBB690754 /* SettingsView.swift */; };
 		BC780FB564E7D9E80D261F2C /* ProxyStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9112A6697EC8B31D8867324F /* ProxyStorageManager.swift */; };
 		C3B942492F7C430C20DF45CF /* SidebarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3716BA53E78FC190E65C1C86 /* SidebarItem.swift */; };
@@ -52,6 +53,7 @@
 		8D78335BD2F24D169CE10A0B /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
 		9112A6697EC8B31D8867324F /* ProxyStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyStorageManager.swift; sourceTree = "<group>"; };
 		91B5991EC41BA86B0141BF96 /* ChecksumVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecksumVerifier.swift; sourceTree = "<group>"; };
+		91D4C0A3FCCC7009DF13E9CF /* CLIProxyAPIReleaseSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIProxyAPIReleaseSource.swift; sourceTree = "<group>"; };
 		A380CD464633BDF200449CCE /* ManagementAPIModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagementAPIModels.swift; sourceTree = "<group>"; };
 		A9A63E0997168E7E98123F37 /* Flux.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Flux.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA363E81C6AE9951CDA51DB5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -166,6 +168,7 @@
 			children = (
 				91B5991EC41BA86B0141BF96 /* ChecksumVerifier.swift */,
 				CED3184BD8547A308C9DA164 /* CLIProxyAPIReleaseService.swift */,
+				91D4C0A3FCCC7009DF13E9CF /* CLIProxyAPIReleaseSource.swift */,
 				FB51EBB5A2F06D38ABF766AF /* ManagedProxyCoordinator.swift */,
 				9112A6697EC8B31D8867324F /* ProxyStorageManager.swift */,
 			);
@@ -243,6 +246,7 @@
 				DB3D37550CC00DBA8908B3C0 /* AppViewModel.swift in Sources */,
 				9D6140B19AEC78B3132E4D92 /* CLIProxyAPIDiscoveryService.swift in Sources */,
 				179E8916039E2D7B41EDDC1B /* CLIProxyAPIReleaseService.swift in Sources */,
+				9F179B23FE9E231C6AB13051 /* CLIProxyAPIReleaseSource.swift in Sources */,
 				685A99BEAD9156570D976033 /* CLIProxyAPIRuntimeService.swift in Sources */,
 				CFC2EE29B86640912F39C061 /* ChecksumVerifier.swift in Sources */,
 				257ACD4FA992B8F9E4EED47B /* ContentView.swift in Sources */,

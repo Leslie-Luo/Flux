@@ -5,6 +5,7 @@
   "tmux_session": null,
   "pane_id": "34",
   "work_dir": "/Users/leslie/Documents/Code/Project/Flux",
-  "active": true,
-  "started_at": "2026-01-05 12:59:22"
+  "active": false,
+  "started_at": "2026-01-05 12:59:22",
+  "ended_at": "2026-01-05 21:59:39"
 }

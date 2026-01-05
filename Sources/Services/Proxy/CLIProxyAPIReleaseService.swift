@@ -25,23 +25,13 @@ enum CLIProxyAPIReleaseServiceError: Error, LocalizedError {
 }
 
 actor CLIProxyAPIReleaseService {
-    struct Repository: Sendable {
-        let owner: String
-        let name: String
-
-        init(owner: String, name: String) {
-            self.owner = owner
-            self.name = name
-        }
-    }
-
-    private let repository: Repository
+    private let source: CLIProxyAPIReleaseSource
     private let session: URLSession
     private let logger = Logger(subsystem: "com.flux.app", category: "CLIProxyAPIRelease")
     private let timeout: TimeInterval = 30
 
-    init(repository: Repository = Repository(owner: "anthropics", name: "claude-code-proxy")) {
-        self.repository = repository
+    init(source: CLIProxyAPIReleaseSource = .official) {
+        self.source = source
 
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
@@ -113,8 +103,8 @@ actor CLIProxyAPIReleaseService {
     private func apiURL(path: String, queryItems: [URLQueryItem]) throws -> URL {
         var components = URLComponents()
         components.scheme = "https"
-        components.host = "api.github.com"
-        components.path = "/repos/\(repository.owner)/\(repository.name)/\(path)"
+        components.host = "api.\(source.host)"
+        components.path = "/repos/\(source.owner)/\(source.name)/\(path)"
         if !queryItems.isEmpty {
             components.queryItems = queryItems
         }

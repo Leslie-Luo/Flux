@@ -5,9 +5,10 @@
   "tmux_session": null,
   "pane_id": "33",
   "work_dir": "/Users/leslie/Documents/Code/Project/Flux",
-  "active": true,
+  "active": false,
   "started_at": "2026-01-05 12:59:22",
   "gemini_session_path": "/Users/leslie/.gemini/tmp/a4ec19a678537d004af5f854134f8f6c56e8b6bcece5313bc519f617f8c8a8cf/chats/session-2026-01-04T01-35-a401de8c.json",
   "gemini_project_hash": "a4ec19a678537d004af5f854134f8f6c56e8b6bcece5313bc519f617f8c8a8cf",
-  "gemini_session_id": "a401de8c-5698-4da9-98e6-2868286a6644"
+  "gemini_session_id": "a401de8c-5698-4da9-98e6-2868286a6644",
+  "ended_at": "2026-01-05 21:59:39"
 }
