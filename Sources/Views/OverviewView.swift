@@ -112,7 +112,7 @@ struct OverviewView: View {
                                 
                                 Button("重启") {
                                     Task {
-                                        if let path = appSettings.cliProxyAPIPath {
+                                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
                                             await runtimeService.restart(
                                                 binaryPath: path,
                                                 port: appSettings.cliProxyAPIPort,
@@ -125,7 +125,7 @@ struct OverviewView: View {
                             } else {
                                 Button("启动") {
                                     Task {
-                                        if let path = appSettings.cliProxyAPIPath {
+                                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
                                             await runtimeService.start(
                                                 binaryPath: path,
                                                 port: appSettings.cliProxyAPIPort,
@@ -135,7 +135,7 @@ struct OverviewView: View {
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .disabled(appSettings.cliProxyAPIPath == nil)
+                                .disabled(appSettings.effectiveCLIProxyAPIBinaryPath == nil)
                             }
                         }
                     }
@@ -246,4 +246,3 @@ struct StatusCard<Content: View>: View {
         .environmentObject(AppSettings())
         .environmentObject(CLIProxyAPIRuntimeService())
 }
-

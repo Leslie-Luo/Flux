@@ -53,12 +53,14 @@ struct GitHubRelease: Codable {
     let tagName: String
     let name: String?
     let publishedAt: String?
+    let body: String?
     let assets: [GitHubReleaseAsset]
 
     enum CodingKeys: String, CodingKey {
         case tagName = "tag_name"
         case name
         case publishedAt = "published_at"
+        case body
         case assets
     }
 
@@ -88,7 +90,7 @@ struct GitHubRelease: Codable {
 }
 
 /// 下载进度
-struct DownloadProgress {
+struct DownloadProgress: Sendable {
     let bytesWritten: Int64
     let totalBytes: Int64
 

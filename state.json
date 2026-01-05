@@ -22,7 +22,7 @@
   "current": {
     "type": "step",
     "stepIndex": 7,
-    "subIndex": null
+    "subIndex": 3
   },
   "steps": [
     {
@@ -102,9 +102,25 @@
     {
       "index": 7,
       "title": "实现 CLIProxyAPI 托管模式（版本化存储 + 下载安装 + 模式切换 UI）",
-      "status": "doing",
+      "status": "done",
       "attempts": 0,
-      "substeps": []
+      "substeps": [
+        {
+          "index": 1,
+          "title": "ProxyStorageManager + ChecksumVerifier（版本化存储 + 安全解压 + 校验）",
+          "status": "done"
+        },
+        {
+          "index": 2,
+          "title": "ReleaseService + ManagedProxyCoordinator（GitHub 下载 + 状态管理）",
+          "status": "done"
+        },
+        {
+          "index": 3,
+          "title": "SettingsView UI + Runtime 集成（模式切换 + 启停联动）",
+          "status": "done"
+        }
+      ]
     }
   ],
   "finalDone": [

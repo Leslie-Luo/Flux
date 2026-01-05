@@ -57,7 +57,7 @@ struct FluxApp: App {
             } else if case .stopped = runtimeService.state {
                 Button("启动 CLIProxyAPI") {
                     Task {
-                        if let path = appSettings.cliProxyAPIPath {
+                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
                             await runtimeService.start(
                                 binaryPath: path,
                                 port: appSettings.cliProxyAPIPort,
@@ -69,7 +69,7 @@ struct FluxApp: App {
                         }
                     }
                 }
-                .disabled(appSettings.cliProxyAPIPath == nil)
+                .disabled(appSettings.effectiveCLIProxyAPIBinaryPath == nil)
             }
 
             Divider()

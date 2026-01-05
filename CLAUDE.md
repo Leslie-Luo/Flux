@@ -20,7 +20,8 @@ Sources/
 │   └── FluxApp.swift              # 主入口，MenuBarExtra + Window
 ├── Models/
 │   ├── SidebarItem.swift          # 侧边栏导航项枚举
-│   └── ManagementAPIModels.swift  # API 数据模型
+│   ├── ManagementAPIModels.swift  # API 数据模型
+│   └── ProxyModels.swift          # 托管模式模型 (BinarySource, ProxyVersion, GitHubRelease)
 ├── ViewModels/
 │   ├── AppViewModel.swift
 │   ├── NavigationViewModel.swift
@@ -30,16 +31,21 @@ Sources/
 │   ├── ContentView.swift          # 主 NavigationSplitView
 │   ├── OverviewView.swift         # 概览仪表盘
 │   ├── ProvidersView.swift        # Provider 管理
-│   ├── SettingsView.swift         # 设置页
+│   ├── SettingsView.swift         # 设置页 (含模式切换)
 │   ├── LogsView.swift             # 日志查看
 │   └── PlaceholderView.swift
 ├── Services/
 │   ├── AppSettings.swift          # UserDefaults + Keychain 持久化
-│   ├── CLIProxyAPIDiscoveryService.swift  # 自动发现/下载
+│   ├── CLIProxyAPIDiscoveryService.swift  # 自动发现
 │   ├── CLIProxyAPIRuntimeService.swift    # 进程生命周期管理
 │   ├── ManagementAPIClient.swift          # REST API 客户端 (actor)
 │   ├── NotificationService.swift          # 系统通知
-│   └── UpdateService.swift                # 自动更新占位
+│   ├── UpdateService.swift                # 自动更新占位
+│   └── Proxy/
+│       ├── ProxyStorageManager.swift      # 版本化存储管理
+│       ├── ChecksumVerifier.swift         # SHA256 校验
+│       ├── CLIProxyAPIReleaseService.swift # GitHub Release 下载
+│       └── ManagedProxyCoordinator.swift  # 托管模式状态协调
 └── Resources/
     ├── en.lproj/Localizable.strings
     └── zh-Hans.lproj/Localizable.strings
@@ -56,6 +62,26 @@ Sources/
 ### 默认配置
 - **端口**: 8317 (代理和管理共用)
 - **密码**: 存储在 macOS Keychain
+
+## 二进制模式
+
+Flux 支持两种 CLIProxyAPI 来源模式：
+
+### 托管模式 (Managed)
+- 自动从 GitHub Releases 下载 CLIProxyAPI
+- 版本化存储: `~/Library/Application Support/Flux/proxy/v{version}/CLIProxyAPI`
+- `current` 符号链接指向激活版本
+- 支持版本切换、更新检查、旧版本清理
+- SHA256 校验确保下载完整性
+
+### 外部模式 (External)
+- 连接用户已有的 CLIProxyAPI 二进制
+- 手动选择二进制路径
+- 由 App 启动和管理进程
+
+### 模式切换
+- 切换时自动 stop → switch → restart
+- `effectiveCLIProxyAPIBinaryPath` 计算属性统一路径获取
 
 ## 开发指南
 
@@ -86,8 +112,18 @@ open /Users/leslie/Library/Developer/Xcode/DerivedData/Flux-*/Build/Products/Deb
    - 自动处理 401 认证错误
 
 3. **AppSettings** - 配置持久化
-   - UserDefaults: 端口、路径
+   - UserDefaults: 端口、路径、模式
    - Keychain: 管理密码
+
+4. **ProxyStorageManager** - 版本化存储
+   - 安全解压 (防路径穿越)
+   - chmod 0o755 + ad-hoc codesign
+   - 版本激活/删除/清理
+
+5. **ManagedProxyCoordinator** - 托管模式协调器
+   - GitHub Release 获取
+   - 下载进度跟踪
+   - 安装/激活/删除版本
 
 ## 代码规范
 
@@ -95,10 +131,11 @@ open /Users/leslie/Library/Developer/Xcode/DerivedData/Flux-*/Build/Products/Deb
 - 使用 `actor` 处理并发 API 调用
 - ViewModel 使用 `@Published` 属性
 - View 使用 `@EnvironmentObject` 共享状态
+- `Sendable` 协议确保并发安全
 
-## 待实现功能
+## 安全考虑
 
-- [ ] 内置 CLIProxyAPI 二进制 (Bundled mode)
-- [ ] 本地/内置模式切换
-- [ ] 从配置文件自动读取端口
-- [ ] Sparkle 自动更新集成
+- 解压前检查路径穿越和 symlink 逃逸
+- SHA256 校验下载文件完整性
+- 管理密码存储在 Keychain
+- Best-effort ad-hoc 签名

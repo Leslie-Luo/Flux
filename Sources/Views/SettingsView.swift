@@ -4,6 +4,7 @@ struct SettingsView: View {
     @EnvironmentObject var appSettings: AppSettings
     @EnvironmentObject var runtimeService: CLIProxyAPIRuntimeService
     @StateObject private var discoveryService = CLIProxyAPIDiscoveryService()
+    @StateObject private var coordinator = ManagedProxyCoordinator()
     @State private var showingFilePicker = false
     @State private var showingConfigPicker = false
     @State private var portString = ""
@@ -16,33 +17,42 @@ struct SettingsView: View {
                 Text("设置")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                
-                // CLIProxyAPI Discovery
-                GroupBox("CLIProxyAPI 路径") {
+
+                GroupBox("CLIProxyAPI 模式") {
                     VStack(alignment: .leading, spacing: 12) {
-                        statusRow
-                        
-                        Divider()
-                        
-                        HStack(spacing: 12) {
-                            Button("重新探测") {
-                                Task {
-                                    await discoveryService.discover(
-                                        customPath: appSettings.cliProxyAPIPath,
-                                        persistTo: appSettings
-                                    )
-                                }
+                        Picker("模式", selection: $appSettings.binarySource) {
+                            ForEach(BinarySource.allCases, id: \.self) { source in
+                                Text(source.displayName)
+                                    .tag(source)
                             }
-                            
-                            Button("选择本地二进制...") {
-                                showingFilePicker = true
-                            }
-                            
-                            Link("下载 CLIProxyAPI", destination: downloadURL)
                         }
-                        .buttonStyle(.bordered)
+                        .pickerStyle(.segmented)
+                        .onChange(of: appSettings.binarySource) { _, _ in
+                            Task { await handleBinarySourceChanged() }
+                        }
+
+                        Text(appSettings.binarySource.description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
+                            Text(path)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        } else if appSettings.binarySource == .managed {
+                            Text("尚未安装托管版本")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding(.vertical, 8)
+                }
+                
+                if appSettings.binarySource == .managed {
+                    managedModeSection
+                } else {
+                    externalModeSection
                 }
                 
                 // CLIProxyAPI Runtime Control
@@ -120,7 +130,7 @@ struct SettingsView: View {
                                 
                                 Button("重启") {
                                     Task {
-                                        if let path = appSettings.cliProxyAPIPath {
+                                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
                                             await runtimeService.restart(
                                                 binaryPath: path,
                                                 port: appSettings.cliProxyAPIPort,
@@ -133,7 +143,7 @@ struct SettingsView: View {
                             } else {
                                 Button("启动") {
                                     Task {
-                                        if let path = appSettings.cliProxyAPIPath {
+                                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
                                             await runtimeService.start(
                                                 binaryPath: path,
                                                 port: appSettings.cliProxyAPIPort,
@@ -143,7 +153,7 @@ struct SettingsView: View {
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .disabled(appSettings.cliProxyAPIPath == nil)
+                                .disabled(appSettings.effectiveCLIProxyAPIBinaryPath == nil)
                             }
                         }
                     }
@@ -179,11 +189,226 @@ struct SettingsView: View {
         }
         .task {
             portString = String(appSettings.cliProxyAPIPort)
+
+            await coordinator.refresh()
+            await coordinator.checkForUpdate()
+
+            if appSettings.binarySource == .external {
+                await discoveryService.discover(
+                    customPath: appSettings.cliProxyAPIPath,
+                    persistTo: appSettings
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var managedModeSection: some View {
+        GroupBox("托管模式") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("当前版本")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(coordinator.currentVersion.map { "v\($0)" } ?? "未安装")
+                            .font(.headline)
+                    }
+
+                    Spacer()
+
+                    Button("检查更新") {
+                        Task { await coordinator.checkForUpdate() }
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(coordinator.isCheckingUpdate || coordinator.isInstalling)
+                }
+
+                if coordinator.isCheckingUpdate {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
+
+                if let latest = coordinator.availableLatest {
+                    Divider()
+
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("最新版本")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("v\(latest.versionNumber)")
+                                .font(.headline)
+                        }
+
+                        Spacer()
+
+                        let isUpdateAvailable = latest.versionNumber != coordinator.currentVersion
+                        if isUpdateAvailable {
+                            Button(coordinator.currentVersion == nil ? "安装" : "更新") {
+                                Task { await installAndMaybeRestart(release: latest) }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(coordinator.isInstalling)
+                        } else {
+                            Text("已是最新")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if coordinator.isInstalling, let progress = coordinator.downloadProgress {
+                    ProgressView(value: progress.fractionCompleted)
+                    Text(progress.formattedProgress)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let message = coordinator.error, !message.isEmpty {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                Divider()
+
+                if coordinator.installedVersions.isEmpty {
+                    Text("暂无已安装版本")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(coordinator.installedVersions) { version in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("v\(version.version)")
+                                        .font(.headline)
+                                    if let date = version.releaseDate {
+                                        Text(date.formatted(date: .abbreviated, time: .omitted))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                if version.version == coordinator.currentVersion {
+                                    Text("当前")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Button("启用") {
+                                        Task { await activateAndMaybeRestart(version: version.version) }
+                                    }
+                                    .buttonStyle(.bordered)
+
+                                    Button("删除") {
+                                        Task { await coordinator.delete(version: version.version) }
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .tint(.red)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+
+                Link("查看 Release 页面", destination: downloadURL)
+                    .font(.caption)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var externalModeSection: some View {
+        GroupBox("CLIProxyAPI 路径") {
+            VStack(alignment: .leading, spacing: 12) {
+                statusRow
+
+                Divider()
+
+                HStack(spacing: 12) {
+                    Button("重新探测") {
+                        Task {
+                            await discoveryService.discover(
+                                customPath: appSettings.cliProxyAPIPath,
+                                persistTo: appSettings
+                            )
+                        }
+                    }
+
+                    Button("选择本地二进制...") {
+                        showingFilePicker = true
+                    }
+
+                    Link("下载 CLIProxyAPI", destination: downloadURL)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func handleBinarySourceChanged() async {
+        await coordinator.refresh()
+        if appSettings.binarySource == .managed {
+            await coordinator.checkForUpdate()
+        }
+
+        if appSettings.binarySource == .external {
             await discoveryService.discover(
                 customPath: appSettings.cliProxyAPIPath,
                 persistTo: appSettings
             )
         }
+
+        let wasRunning = runtimeService.state.isRunning
+        guard wasRunning else { return }
+
+        await runtimeService.stop()
+
+        guard let path = appSettings.effectiveCLIProxyAPIBinaryPath else { return }
+        await runtimeService.start(
+            binaryPath: path,
+            port: appSettings.cliProxyAPIPort,
+            configPath: appSettings.cliProxyAPIConfigPath
+        )
+    }
+
+    private func activateAndMaybeRestart(version: String) async {
+        let wasRunning = runtimeService.state.isRunning
+        if wasRunning {
+            await runtimeService.stop()
+        }
+
+        await coordinator.activate(version: version)
+
+        guard wasRunning, let path = appSettings.effectiveCLIProxyAPIBinaryPath else { return }
+        await runtimeService.start(
+            binaryPath: path,
+            port: appSettings.cliProxyAPIPort,
+            configPath: appSettings.cliProxyAPIConfigPath
+        )
+    }
+
+    private func installAndMaybeRestart(release: GitHubRelease) async {
+        let wasRunning = runtimeService.state.isRunning
+        if wasRunning {
+            await runtimeService.stop()
+        }
+
+        await coordinator.install(release: release)
+
+        guard wasRunning, let path = appSettings.effectiveCLIProxyAPIBinaryPath else { return }
+        await runtimeService.start(
+            binaryPath: path,
+            port: appSettings.cliProxyAPIPort,
+            configPath: appSettings.cliProxyAPIConfigPath
+        )
     }
     
     @ViewBuilder
