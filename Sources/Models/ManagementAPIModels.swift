@@ -229,6 +229,7 @@ struct OpenAICompatibilityResponse: Decodable {
 /// 认证文件信息（来自 /auth-files 端点）
 struct AuthFile: Decodable, Equatable {
     let id: String?
+    let authIndex: String?
     let name: String?
     let type: String?  // 降级模式下返回
     let provider: String?
@@ -251,12 +252,41 @@ struct AuthFile: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, type, provider, label, status, disabled, unavailable, source, path, size, modtime, email, account
+        case authIndex = "auth_index"
+        case authIndexAlt = "authIndex"
         case statusMessage = "status_message"
         case runtimeOnly = "runtime_only"
         case accountType = "account_type"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case lastRefresh = "last_refresh"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decodeIfPresent(String.self, forKey: .id)
+        let authIndexPrimary = try container.decodeIfPresent(String.self, forKey: .authIndex)
+        let authIndexAlternate = try container.decodeIfPresent(String.self, forKey: .authIndexAlt)
+        self.authIndex = authIndexPrimary ?? authIndexAlternate
+        self.name = try container.decodeIfPresent(String.self, forKey: .name)
+        self.type = try container.decodeIfPresent(String.self, forKey: .type)
+        self.provider = try container.decodeIfPresent(String.self, forKey: .provider)
+        self.label = try container.decodeIfPresent(String.self, forKey: .label)
+        self.status = try container.decodeIfPresent(String.self, forKey: .status)
+        self.statusMessage = try container.decodeIfPresent(String.self, forKey: .statusMessage)
+        self.disabled = try container.decodeIfPresent(Bool.self, forKey: .disabled)
+        self.unavailable = try container.decodeIfPresent(Bool.self, forKey: .unavailable)
+        self.runtimeOnly = try container.decodeIfPresent(Bool.self, forKey: .runtimeOnly)
+        self.source = try container.decodeIfPresent(String.self, forKey: .source)
+        self.path = try container.decodeIfPresent(String.self, forKey: .path)
+        self.size = try container.decodeIfPresent(Int.self, forKey: .size)
+        self.modtime = try container.decodeIfPresent(String.self, forKey: .modtime)
+        self.email = try container.decodeIfPresent(String.self, forKey: .email)
+        self.accountType = try container.decodeIfPresent(String.self, forKey: .accountType)
+        self.account = try container.decodeIfPresent(String.self, forKey: .account)
+        self.createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+        self.updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+        self.lastRefresh = try container.decodeIfPresent(String.self, forKey: .lastRefresh)
     }
 
     static func == (lhs: AuthFile, rhs: AuthFile) -> Bool {
@@ -269,6 +299,230 @@ struct AuthFilesResponse: Decodable {
     let files: [AuthFile]?
 
     var count: Int { files?.count ?? 0 }
+}
+
+// MARK: - API Call (Proxy API Tools)
+
+struct APICallRequest: Codable {
+    let authIndex: String?
+    let method: String
+    let url: String
+    let header: [String: String]?
+    let data: String?
+
+    enum CodingKeys: String, CodingKey {
+        case authIndex = "auth_index"
+        case method
+        case url
+        case header
+        case data
+    }
+}
+
+struct APICallResponse: Decodable {
+    let statusCode: Int
+    let header: [String: [String]]?
+    let body: String
+
+    enum CodingKeys: String, CodingKey {
+        case statusCode = "status_code"
+        case header
+        case body
+    }
+}
+
+// MARK: - Quota Payloads (Upstream)
+
+struct GeminiCliQuotaBucket: Decodable {
+    let modelId: String?
+    let tokenType: String?
+    let remainingFraction: Double?
+    let remainingAmount: Double?
+    let resetTime: String?
+
+    enum CodingKeys: String, CodingKey {
+        case modelId
+        case modelIdAlt = "model_id"
+        case tokenType
+        case tokenTypeAlt = "token_type"
+        case remainingFraction
+        case remainingFractionAlt = "remaining_fraction"
+        case remainingAmount
+        case remainingAmountAlt = "remaining_amount"
+        case resetTime
+        case resetTimeAlt = "reset_time"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.modelId = try container.decodeIfPresent(String.self, forKey: .modelId) ?? container.decodeIfPresent(String.self, forKey: .modelIdAlt)
+        self.tokenType = try container.decodeIfPresent(String.self, forKey: .tokenType) ?? container.decodeIfPresent(String.self, forKey: .tokenTypeAlt)
+        self.remainingFraction = Self.decodeFlexibleDouble(container: container, primary: .remainingFraction, fallback: .remainingFractionAlt)
+        self.remainingAmount = Self.decodeFlexibleDouble(container: container, primary: .remainingAmount, fallback: .remainingAmountAlt)
+        self.resetTime = try container.decodeIfPresent(String.self, forKey: .resetTime) ?? container.decodeIfPresent(String.self, forKey: .resetTimeAlt)
+    }
+
+    private static func decodeFlexibleDouble(container: KeyedDecodingContainer<CodingKeys>, primary: CodingKeys, fallback: CodingKeys) -> Double? {
+        if let v = try? container.decodeIfPresent(Double.self, forKey: primary) {
+            return v
+        }
+        if let s = try? container.decodeIfPresent(String.self, forKey: primary), let v = Double(s.trimmingCharacters(in: .whitespacesAndNewlines)) {
+            return v
+        }
+        if let v = try? container.decodeIfPresent(Double.self, forKey: fallback) {
+            return v
+        }
+        if let s = try? container.decodeIfPresent(String.self, forKey: fallback), let v = Double(s.trimmingCharacters(in: .whitespacesAndNewlines)) {
+            return v
+        }
+        return nil
+    }
+}
+
+struct GeminiCliQuotaPayload: Decodable {
+    let buckets: [GeminiCliQuotaBucket]?
+}
+
+struct AntigravityQuotaInfo: Decodable {
+    struct QuotaInfo: Decodable {
+        let remainingFraction: Double?
+        let remaining: Double?
+        let resetTime: String?
+
+        enum CodingKeys: String, CodingKey {
+            case remainingFraction
+            case remainingFractionAlt = "remaining_fraction"
+            case remaining
+            case resetTime
+            case resetTimeAlt = "reset_time"
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.remainingFraction = Self.decodeFlexibleDouble(container: container, primary: .remainingFraction, fallback: .remainingFractionAlt)
+            self.remaining = Self.decodeFlexibleDouble(container: container, primary: .remaining, fallback: .remaining)
+            self.resetTime = try container.decodeIfPresent(String.self, forKey: .resetTime) ?? container.decodeIfPresent(String.self, forKey: .resetTimeAlt)
+        }
+
+        private static func decodeFlexibleDouble(container: KeyedDecodingContainer<CodingKeys>, primary: CodingKeys, fallback: CodingKeys) -> Double? {
+            if let v = try? container.decodeIfPresent(Double.self, forKey: primary) {
+                return v
+            }
+            if let s = try? container.decodeIfPresent(String.self, forKey: primary) {
+                let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.hasSuffix("%"), let p = Double(trimmed.dropLast()) {
+                    return p / 100.0
+                }
+                if let v = Double(trimmed) {
+                    return v
+                }
+            }
+            if let v = try? container.decodeIfPresent(Double.self, forKey: fallback) {
+                return v
+            }
+            if let s = try? container.decodeIfPresent(String.self, forKey: fallback) {
+                let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.hasSuffix("%"), let p = Double(trimmed.dropLast()) {
+                    return p / 100.0
+                }
+                if let v = Double(trimmed) {
+                    return v
+                }
+            }
+            return nil
+        }
+    }
+
+    let displayName: String?
+    let quotaInfo: QuotaInfo?
+    let quotaInfoAlt: QuotaInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case displayName
+        case quotaInfo
+        case quotaInfoAlt = "quota_info"
+    }
+
+    var effectiveQuotaInfo: QuotaInfo? { quotaInfo ?? quotaInfoAlt }
+}
+
+typealias AntigravityModelsPayload = [String: AntigravityQuotaInfo]
+
+struct CodexUsageWindow: Decodable {
+    let usedPercent: Double?
+    let resetAfterSeconds: Double?
+    let resetAt: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case usedPercent = "used_percent"
+        case usedPercentAlt = "usedPercent"
+        case resetAfterSeconds = "reset_after_seconds"
+        case resetAfterSecondsAlt = "resetAfterSeconds"
+        case resetAt = "reset_at"
+        case resetAtAlt = "resetAt"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.usedPercent = Self.decodeFlexibleDouble(container: container, keys: [.usedPercent, .usedPercentAlt])
+        self.resetAfterSeconds = Self.decodeFlexibleDouble(container: container, keys: [.resetAfterSeconds, .resetAfterSecondsAlt])
+        self.resetAt = Self.decodeFlexibleDouble(container: container, keys: [.resetAt, .resetAtAlt])
+    }
+
+    private static func decodeFlexibleDouble(container: KeyedDecodingContainer<CodingKeys>, keys: [CodingKeys]) -> Double? {
+        for key in keys {
+            if let v = try? container.decodeIfPresent(Double.self, forKey: key) {
+                return v
+            }
+            if let s = try? container.decodeIfPresent(String.self, forKey: key), let v = Double(s.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                return v
+            }
+        }
+        return nil
+    }
+}
+
+struct CodexRateLimitInfo: Decodable {
+    let allowed: Bool?
+    let limitReached: Bool?
+    let primaryWindow: CodexUsageWindow?
+    let secondaryWindow: CodexUsageWindow?
+
+    enum CodingKeys: String, CodingKey {
+        case allowed
+        case limitReached = "limit_reached"
+        case limitReachedAlt = "limitReached"
+        case primaryWindow = "primary_window"
+        case primaryWindowAlt = "primaryWindow"
+        case secondaryWindow = "secondary_window"
+        case secondaryWindowAlt = "secondaryWindow"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.allowed = try container.decodeIfPresent(Bool.self, forKey: .allowed)
+        self.limitReached = try container.decodeIfPresent(Bool.self, forKey: .limitReached) ?? container.decodeIfPresent(Bool.self, forKey: .limitReachedAlt)
+        self.primaryWindow = try container.decodeIfPresent(CodexUsageWindow.self, forKey: .primaryWindow) ?? container.decodeIfPresent(CodexUsageWindow.self, forKey: .primaryWindowAlt)
+        self.secondaryWindow = try container.decodeIfPresent(CodexUsageWindow.self, forKey: .secondaryWindow) ?? container.decodeIfPresent(CodexUsageWindow.self, forKey: .secondaryWindowAlt)
+    }
+}
+
+struct CodexUsagePayload: Decodable {
+    let planType: String?
+    let rateLimit: CodexRateLimitInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case planType = "plan_type"
+        case planTypeAlt = "planType"
+        case rateLimit = "rate_limit"
+        case rateLimitAlt = "rateLimit"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.planType = try container.decodeIfPresent(String.self, forKey: .planType) ?? container.decodeIfPresent(String.self, forKey: .planTypeAlt)
+        self.rateLimit = try container.decodeIfPresent(CodexRateLimitInfo.self, forKey: .rateLimit) ?? container.decodeIfPresent(CodexRateLimitInfo.self, forKey: .rateLimitAlt)
+    }
 }
 
 // MARK: - Models

@@ -82,6 +82,15 @@ actor ManagementAPIClient {
         return try decode(AuthFilesResponse.self, from: data)
     }
 
+    // MARK: - API Tools
+
+    func apiCall(baseURL: URL, request: APICallRequest, password: String? = nil) async throws -> APICallResponse {
+        let url = baseURL.appendingPathComponent("api-call")
+        let body = try JSONEncoder().encode(request)
+        let data = try await performRequest(url: url, method: "POST", body: body, password: password)
+        return try decode(APICallResponse.self, from: data)
+    }
+
     // MARK: - Provider Keys (Write Operations)
 
     func putGeminiApiKeys(baseURL: URL, keys: [ProviderKeyPayload], password: String? = nil) async throws -> StatusOKResponse {

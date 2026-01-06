@@ -4,6 +4,7 @@ struct AuthFilesView: View {
     @EnvironmentObject var appSettings: AppSettings
     @StateObject private var viewModel = AuthFilesViewModel()
     @State private var isRefreshing = false
+    @State private var isQuotaRefreshing = false
 
     var body: some View {
         ScrollView {
@@ -42,7 +43,10 @@ struct AuthFilesView: View {
                         case .loaded(let files):
                             VStack(alignment: .leading, spacing: 8) {
                                 ForEach(Array(files.enumerated()), id: \.offset) { _, file in
-                                    AuthFileRow(file: file)
+                                    AuthFileRow(
+                                        file: file,
+                                        quotaState: quotaState(for: file)
+                                    )
                                 }
                             }
                         case .error(let message):
@@ -85,6 +89,15 @@ struct AuthFilesView: View {
             }
             Spacer()
 
+            Button(action: refreshQuota) {
+                HStack {
+                    Image(systemName: "chart.pie")
+                    Text("刷新额度")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isQuotaRefreshing)
+
             Button(action: refresh) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -103,10 +116,25 @@ struct AuthFilesView: View {
             isRefreshing = false
         }
     }
+
+    private func refreshQuota() {
+        isQuotaRefreshing = true
+        Task {
+            await viewModel.refreshQuota(baseURL: appSettings.managementBaseURL, password: appSettings.managementPassword)
+            isQuotaRefreshing = false
+        }
+    }
+
+    private func quotaState(for file: AuthFile) -> LoadState<String>? {
+        let key = (file.name ?? file.id ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return nil }
+        return viewModel.quotaStateByName[key]
+    }
 }
 
 private struct AuthFileRow: View {
     let file: AuthFile
+    let quotaState: LoadState<String>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -156,8 +184,47 @@ private struct AuthFileRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }
+
+            quotaLine
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var quotaLine: some View {
+        let provider = (file.provider ?? file.type ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !["antigravity", "codex", "gemini-cli"].contains(provider) {
+            EmptyView()
+        } else {
+            switch quotaState {
+            case .none:
+                Text("额度：--")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            case .some(.idle):
+                Text("额度：--")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            case .some(.loading):
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                    Text("额度查询中...")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            case .some(.loaded(let text)):
+                Text(text)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            case .some(.error(let message)):
+                Text("额度：\(message)")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+            }
+        }
     }
 
     private func statusColor(for status: String) -> Color {
@@ -188,4 +255,3 @@ private struct Dot: View {
     AuthFilesView()
         .environmentObject(AppSettings())
 }
-

@@ -26,6 +26,7 @@
 		91D2900EC2A5DDF00E6725B8 /* ProxyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479FF1BB963A12FAB14C8BE0 /* ProxyModels.swift */; };
 		951286CDB51E27F8611B6E92 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3B4C32D277E16CE0B067FF /* AppSettings.swift */; };
 		9F179B23FE9E231C6AB13051 /* CLIProxyAPIReleaseSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D4C0A3FCCC7009DF13E9CF /* CLIProxyAPIReleaseSource.swift */; };
+		AB0A70328F8862FE4FDEBB6E /* QuotaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BAA4BE1D3213681CAB357A /* QuotaService.swift */; };
 		B1B6D80907B0A70810B673AD /* AuthFilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A551EB12FFEA5970B09416 /* AuthFilesView.swift */; };
 		B34416A7FF7AA2836BD5E739 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7583027CED108EBB690754 /* SettingsView.swift */; };
 		BC780FB564E7D9E80D261F2C /* ProxyStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9112A6697EC8B31D8867324F /* ProxyStorageManager.swift */; };
@@ -50,6 +51,7 @@
 		3716BA53E78FC190E65C1C86 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
 		479FF1BB963A12FAB14C8BE0 /* ProxyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyModels.swift; sourceTree = "<group>"; };
 		5226118A9696C9D427288760 /* OverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewView.swift; sourceTree = "<group>"; };
+		55BAA4BE1D3213681CAB357A /* QuotaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotaService.swift; sourceTree = "<group>"; };
 		646155949835C2AA6C56A89B /* LoadState+UI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LoadState+UI.swift"; sourceTree = "<group>"; };
 		67E33B241946ED2607B93AFD /* PlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderView.swift; sourceTree = "<group>"; };
 		6C414D3758F705E490E8AC4E /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
@@ -94,6 +96,7 @@
 				E69E105B547D81C944A5F7C8 /* NotificationService.swift */,
 				8D78335BD2F24D169CE10A0B /* UpdateService.swift */,
 				F552ED91E69D801B1C78D23E /* Proxy */,
+				C3EEB2FD826D59E4D2EFD222 /* Quota */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -170,6 +173,14 @@
 				73F43D6257C76EEC0E48353A /* ProvidersViewModel.swift */,
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		C3EEB2FD826D59E4D2EFD222 /* Quota */ = {
+			isa = PBXGroup;
+			children = (
+				55BAA4BE1D3213681CAB357A /* QuotaService.swift */,
+			);
+			path = Quota;
 			sourceTree = "<group>";
 		};
 		D738A9BE4F57082B48DD3436 = {
@@ -284,6 +295,7 @@
 				535A66805E0A1D9506BB3C2E /* ProvidersViewModel.swift in Sources */,
 				91D2900EC2A5DDF00E6725B8 /* ProxyModels.swift in Sources */,
 				BC780FB564E7D9E80D261F2C /* ProxyStorageManager.swift in Sources */,
+				AB0A70328F8862FE4FDEBB6E /* QuotaService.swift in Sources */,
 				B34416A7FF7AA2836BD5E739 /* SettingsView.swift in Sources */,
 				C3B942492F7C430C20DF45CF /* SidebarItem.swift in Sources */,
 				269CA86526A19E30E3D0BFD2 /* UpdateService.swift in Sources */,
