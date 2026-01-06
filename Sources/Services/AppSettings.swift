@@ -6,29 +6,22 @@ final class AppSettings: ObservableObject {
     private let defaults = UserDefaults.standard
 
     private enum Keys {
-        static let cliProxyAPIPath = "cliProxyAPIBinaryPath"
+        static let externalBinaryPath = "cliProxyAPIBinaryPath"
         static let cliProxyAPIVersion = "cliProxyAPIVersion"
         static let cliProxyAPIPort = "cliProxyAPIPort"
         static let cliProxyAPIConfigPath = "cliProxyAPIConfigPath"
         static let managementPort = "managementPort"
-        static let binarySource = "cliProxyAPIBinarySource"
         static let keychainService = "com.flux.app"
         static let keychainAccount = "managementPassword"
     }
 
-    @Published var cliProxyAPIPath: String? {
+    @Published var externalBinaryPath: String? {
         didSet {
-            if let path = cliProxyAPIPath {
-                defaults.set(path, forKey: Keys.cliProxyAPIPath)
+            if let path = externalBinaryPath {
+                defaults.set(path, forKey: Keys.externalBinaryPath)
             } else {
-                defaults.removeObject(forKey: Keys.cliProxyAPIPath)
+                defaults.removeObject(forKey: Keys.externalBinaryPath)
             }
-        }
-    }
-
-    @Published var binarySource: BinarySource {
-        didSet {
-            defaults.set(binarySource.rawValue, forKey: Keys.binarySource)
         }
     }
 
@@ -66,22 +59,16 @@ final class AppSettings: ObservableObject {
         URL(string: "http://127.0.0.1:\(managementPort)/v0/management")!
     }
 
-    var effectiveCLIProxyAPIBinaryPath: String? {
-        switch binarySource {
-        case .managed:
-            return ProxyStorageManager.shared.currentBinaryPath?.path
-        case .external:
-            return cliProxyAPIPath
-        }
+    var currentBinaryPath: String? {
+        ProxyStorageManager.shared.currentBinaryPath?.path
     }
 
     init() {
-        self.cliProxyAPIPath = defaults.string(forKey: Keys.cliProxyAPIPath)
+        self.externalBinaryPath = defaults.string(forKey: Keys.externalBinaryPath)
         self.cliProxyAPIVersion = defaults.string(forKey: Keys.cliProxyAPIVersion)
         self.cliProxyAPIPort = defaults.integer(forKey: Keys.cliProxyAPIPort)
         self.cliProxyAPIConfigPath = defaults.string(forKey: Keys.cliProxyAPIConfigPath)
         self.managementPort = defaults.integer(forKey: Keys.managementPort)
-        self.binarySource = BinarySource(rawValue: defaults.string(forKey: Keys.binarySource) ?? "") ?? .external
         if self.cliProxyAPIPort == 0 {
             self.cliProxyAPIPort = 8317 // CLIProxyAPI default port
         }

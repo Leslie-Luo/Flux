@@ -3,9 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var appSettings: AppSettings
     @EnvironmentObject var runtimeService: CLIProxyAPIRuntimeService
-    @StateObject private var discoveryService = CLIProxyAPIDiscoveryService()
     @StateObject private var coordinator = ManagedProxyCoordinator()
-    @State private var showingFilePicker = false
     @State private var showingConfigPicker = false
     @State private var portString = ""
 
@@ -18,42 +16,7 @@ struct SettingsView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                GroupBox("CLIProxyAPI 模式") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Picker("模式", selection: $appSettings.binarySource) {
-                            ForEach(BinarySource.allCases, id: \.self) { source in
-                                Text(source.displayName)
-                                    .tag(source)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .onChange(of: appSettings.binarySource) { _, _ in
-                            Task { await handleBinarySourceChanged() }
-                        }
-
-                        Text(appSettings.binarySource.description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
-                            Text(path)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        } else if appSettings.binarySource == .managed {
-                            Text("尚未安装托管版本")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
-                
-                if appSettings.binarySource == .managed {
-                    managedModeSection
-                } else {
-                    externalModeSection
-                }
+                managedModeSection
                 
                 // CLIProxyAPI Runtime Control
                 GroupBox("运行控制") {
@@ -130,7 +93,7 @@ struct SettingsView: View {
                                 
                                 Button("重启") {
                                     Task {
-                                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
+                                        if let path = ProxyStorageManager.shared.currentBinaryPath?.path {
                                             await runtimeService.restart(
                                                 binaryPath: path,
                                                 port: appSettings.cliProxyAPIPort,
@@ -143,7 +106,7 @@ struct SettingsView: View {
                             } else {
                                 Button("启动") {
                                     Task {
-                                        if let path = appSettings.effectiveCLIProxyAPIBinaryPath {
+                                        if let path = ProxyStorageManager.shared.currentBinaryPath?.path {
                                             await runtimeService.start(
                                                 binaryPath: path,
                                                 port: appSettings.cliProxyAPIPort,
@@ -153,7 +116,7 @@ struct SettingsView: View {
                                     }
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .disabled(appSettings.effectiveCLIProxyAPIBinaryPath == nil)
+                                .disabled(ProxyStorageManager.shared.currentBinaryPath == nil)
                             }
                         }
                     }
@@ -163,21 +126,6 @@ struct SettingsView: View {
             .padding(24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .fileImporter(
-            isPresented: $showingFilePicker,
-            allowedContentTypes: [.unixExecutable, .item],
-            allowsMultipleSelection: false
-        ) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                appSettings.cliProxyAPIPath = url.path
-                Task {
-                    await discoveryService.discover(
-                        customPath: url.path,
-                        persistTo: appSettings
-                    )
-                }
-            }
-        }
         .fileImporter(
             isPresented: $showingConfigPicker,
             allowedContentTypes: [.yaml, .json, .item],
@@ -192,13 +140,6 @@ struct SettingsView: View {
 
             await coordinator.refresh()
             await coordinator.checkForUpdate()
-
-            if appSettings.binarySource == .external {
-                await discoveryService.discover(
-                    customPath: appSettings.cliProxyAPIPath,
-                    persistTo: appSettings
-                )
-            }
         }
     }
 
@@ -323,62 +264,6 @@ struct SettingsView: View {
         }
     }
 
-    @ViewBuilder
-    private var externalModeSection: some View {
-        GroupBox("CLIProxyAPI 路径") {
-            VStack(alignment: .leading, spacing: 12) {
-                statusRow
-
-                Divider()
-
-                HStack(spacing: 12) {
-                    Button("重新探测") {
-                        Task {
-                            await discoveryService.discover(
-                                customPath: appSettings.cliProxyAPIPath,
-                                persistTo: appSettings
-                            )
-                        }
-                    }
-
-                    Button("选择本地二进制...") {
-                        showingFilePicker = true
-                    }
-
-                    Link("下载 CLIProxyAPI", destination: downloadURL)
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(.vertical, 8)
-        }
-    }
-
-    private func handleBinarySourceChanged() async {
-        await coordinator.refresh()
-        if appSettings.binarySource == .managed {
-            await coordinator.checkForUpdate()
-        }
-
-        if appSettings.binarySource == .external {
-            await discoveryService.discover(
-                customPath: appSettings.cliProxyAPIPath,
-                persistTo: appSettings
-            )
-        }
-
-        let wasRunning = runtimeService.state.isRunning
-        guard wasRunning else { return }
-
-        await runtimeService.stop()
-
-        guard let path = appSettings.effectiveCLIProxyAPIBinaryPath else { return }
-        await runtimeService.start(
-            binaryPath: path,
-            port: appSettings.cliProxyAPIPort,
-            configPath: appSettings.cliProxyAPIConfigPath
-        )
-    }
-
     private func activateAndMaybeRestart(version: String) async {
         let wasRunning = runtimeService.state.isRunning
         if wasRunning {
@@ -387,7 +272,7 @@ struct SettingsView: View {
 
         await coordinator.activate(version: version)
 
-        guard wasRunning, let path = appSettings.effectiveCLIProxyAPIBinaryPath else { return }
+        guard wasRunning, let path = ProxyStorageManager.shared.currentBinaryPath?.path else { return }
         await runtimeService.start(
             binaryPath: path,
             port: appSettings.cliProxyAPIPort,
@@ -403,48 +288,12 @@ struct SettingsView: View {
 
         await coordinator.install(release: release)
 
-        guard wasRunning, let path = appSettings.effectiveCLIProxyAPIBinaryPath else { return }
+        guard wasRunning, let path = ProxyStorageManager.shared.currentBinaryPath?.path else { return }
         await runtimeService.start(
             binaryPath: path,
             port: appSettings.cliProxyAPIPort,
             configPath: appSettings.cliProxyAPIConfigPath
         )
-    }
-    
-    @ViewBuilder
-    private var statusRow: some View {
-        HStack {
-            switch discoveryService.status {
-            case .unknown:
-                Image(systemName: "questionmark.circle")
-                    .foregroundStyle(.secondary)
-                Text("正在检测...")
-                    .foregroundStyle(.secondary)
-                
-            case .notFound:
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.red)
-                Text("未找到 CLIProxyAPI")
-                    .foregroundStyle(.secondary)
-                
-            case .found(let path, let version):
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                VStack(alignment: .leading) {
-                    Text("已找到 CLIProxyAPI")
-                    Text(path)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    if let version = version {
-                        Text("版本: \(version)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            
-            Spacer()
-        }
     }
     
     @ViewBuilder

@@ -23,7 +23,6 @@
 		8D7CF29DB1193F71D1E583B7 /* ManagementAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1FB920E674AE0447805D83D /* ManagementAPIClient.swift */; };
 		91D2900EC2A5DDF00E6725B8 /* ProxyModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479FF1BB963A12FAB14C8BE0 /* ProxyModels.swift */; };
 		951286CDB51E27F8611B6E92 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3B4C32D277E16CE0B067FF /* AppSettings.swift */; };
-		9D6140B19AEC78B3132E4D92 /* CLIProxyAPIDiscoveryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60DA30DF1D82A14AABF4C22E /* CLIProxyAPIDiscoveryService.swift */; };
 		9F179B23FE9E231C6AB13051 /* CLIProxyAPIReleaseSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D4C0A3FCCC7009DF13E9CF /* CLIProxyAPIReleaseSource.swift */; };
 		B34416A7FF7AA2836BD5E739 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7583027CED108EBB690754 /* SettingsView.swift */; };
 		BC780FB564E7D9E80D261F2C /* ProxyStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9112A6697EC8B31D8867324F /* ProxyStorageManager.swift */; };
@@ -45,7 +44,6 @@
 		3716BA53E78FC190E65C1C86 /* SidebarItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarItem.swift; sourceTree = "<group>"; };
 		479FF1BB963A12FAB14C8BE0 /* ProxyModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProxyModels.swift; sourceTree = "<group>"; };
 		5226118A9696C9D427288760 /* OverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewView.swift; sourceTree = "<group>"; };
-		60DA30DF1D82A14AABF4C22E /* CLIProxyAPIDiscoveryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIProxyAPIDiscoveryService.swift; sourceTree = "<group>"; };
 		67E33B241946ED2607B93AFD /* PlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderView.swift; sourceTree = "<group>"; };
 		6C414D3758F705E490E8AC4E /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 		7ABFA17A4C767B45FBF446CA /* ProvidersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvidersView.swift; sourceTree = "<group>"; };
@@ -83,7 +81,6 @@
 			isa = PBXGroup;
 			children = (
 				BF3B4C32D277E16CE0B067FF /* AppSettings.swift */,
-				60DA30DF1D82A14AABF4C22E /* CLIProxyAPIDiscoveryService.swift */,
 				21CAA39F2CFA23580BB7FC90 /* CLIProxyAPIRuntimeService.swift */,
 				F1FB920E674AE0447805D83D /* ManagementAPIClient.swift */,
 				E69E105B547D81C944A5F7C8 /* NotificationService.swift */,
@@ -244,7 +241,6 @@
 			files = (
 				951286CDB51E27F8611B6E92 /* AppSettings.swift in Sources */,
 				DB3D37550CC00DBA8908B3C0 /* AppViewModel.swift in Sources */,
-				9D6140B19AEC78B3132E4D92 /* CLIProxyAPIDiscoveryService.swift in Sources */,
 				179E8916039E2D7B41EDDC1B /* CLIProxyAPIReleaseService.swift in Sources */,
 				9F179B23FE9E231C6AB13051 /* CLIProxyAPIReleaseSource.swift in Sources */,
 				685A99BEAD9156570D976033 /* CLIProxyAPIRuntimeService.swift in Sources */,

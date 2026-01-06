@@ -21,7 +21,7 @@ Sources/
 ├── Models/
 │   ├── SidebarItem.swift          # 侧边栏导航项枚举
 │   ├── ManagementAPIModels.swift  # API 数据模型
-│   └── ProxyModels.swift          # 托管模式模型 (BinarySource, ProxyVersion, GitHubRelease)
+│   └── ProxyModels.swift          # 托管模式模型 (ProxyVersion, GitHubRelease)
 ├── ViewModels/
 │   ├── AppViewModel.swift
 │   ├── NavigationViewModel.swift
@@ -31,12 +31,11 @@ Sources/
 │   ├── ContentView.swift          # 主 NavigationSplitView
 │   ├── OverviewView.swift         # 概览仪表盘
 │   ├── ProvidersView.swift        # Provider 管理
-│   ├── SettingsView.swift         # 设置页 (含模式切换)
+│   ├── SettingsView.swift         # 设置页（纯托管模式）
 │   ├── LogsView.swift             # 日志查看
 │   └── PlaceholderView.swift
 ├── Services/
 │   ├── AppSettings.swift          # UserDefaults + Keychain 持久化
-│   ├── CLIProxyAPIDiscoveryService.swift  # 自动发现
 │   ├── CLIProxyAPIRuntimeService.swift    # 进程生命周期管理
 │   ├── ManagementAPIClient.swift          # REST API 客户端 (actor)
 │   ├── NotificationService.swift          # 系统通知
@@ -64,26 +63,17 @@ Sources/
 - **端口**: 8317 (代理和管理共用)
 - **密码**: 存储在 macOS Keychain
 
-## 二进制模式
+## 托管模式
 
-Flux 支持两种 CLIProxyAPI 来源模式：
+Flux 使用纯托管模式管理 CLIProxyAPI：
 
-### 托管模式 (Managed)
 - 自动从 GitHub Releases 下载 CLIProxyAPI
 - **发布源**: `CLIProxyAPIReleaseSource.official` (router-for-me/CLIProxyAPI)
 - 版本化存储: `~/Library/Application Support/Flux/proxy/v{version}/CLIProxyAPI`
 - `current` 符号链接指向激活版本
 - 支持版本切换、更新检查、旧版本清理
 - SHA256 校验确保下载完整性
-
-### 外部模式 (External)
-- 连接用户已有的 CLIProxyAPI 二进制
-- 手动选择二进制路径
-- 由 App 启动和管理进程
-
-### 模式切换
-- 切换时自动 stop → switch → restart
-- `effectiveCLIProxyAPIBinaryPath` 计算属性统一路径获取
+- 二进制路径统一通过 `ProxyStorageManager.shared.currentBinaryPath` 获取
 
 ## 开发指南
 
@@ -114,13 +104,14 @@ open /Users/leslie/Library/Developer/Xcode/DerivedData/Flux-*/Build/Products/Deb
    - 自动处理 401 认证错误
 
 3. **AppSettings** - 配置持久化
-   - UserDefaults: 端口、路径、模式
+   - UserDefaults: 端口、配置路径
    - Keychain: 管理密码
 
 4. **ProxyStorageManager** - 版本化存储
    - 安全解压 (防路径穿越)
    - chmod 0o755 + ad-hoc codesign
    - 版本激活/删除/清理
+   - `shared` 单例提供 `currentBinaryPath`
 
 5. **ManagedProxyCoordinator** - 托管模式协调器
    - GitHub Release 获取

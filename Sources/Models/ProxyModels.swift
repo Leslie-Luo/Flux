@@ -1,25 +1,5 @@
 import Foundation
 
-/// CLIProxyAPI 二进制来源模式
-enum BinarySource: String, CaseIterable, Codable {
-    case managed    // 托管模式：由 Flux 下载和管理
-    case external   // 外部模式：连接用户已运行的实例
-
-    var displayName: String {
-        switch self {
-        case .managed: return "托管模式"
-        case .external: return "外部模式"
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .managed: return "自动下载和管理 CLIProxyAPI"
-        case .external: return "连接已运行的 CLIProxyAPI 实例"
-        }
-    }
-}
-
 /// CLIProxyAPI 版本信息
 struct ProxyVersion: Codable, Equatable, Identifiable {
     let version: String
