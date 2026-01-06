@@ -1,7 +1,7 @@
 import Foundation
 import os.log
 
-enum LoadState<T: Equatable>: Equatable {
+enum LoadState<T> {
     case idle
     case loading
     case loaded(T)
@@ -12,7 +12,6 @@ enum LoadState<T: Equatable>: Equatable {
 final class ManagementViewModel: ObservableObject {
     @Published var healthState: LoadState<HealthResponse> = .idle
     @Published var apiKeysState: LoadState<[String]> = .idle
-    @Published var strategiesState: LoadState<StrategyDTO> = .idle
 
     private let client = ManagementAPIClient()
     private let logger = Logger(subsystem: "com.flux.app", category: "ManagementVM")
@@ -41,8 +40,8 @@ final class ManagementViewModel: ObservableObject {
 
     func updateApiKeys(baseURL: URL, keys: [String], password: String?) async {
         do {
-            let updated = try await client.updateApiKeys(baseURL: baseURL, keys: keys, password: password)
-            apiKeysState = .loaded(updated)
+            try await client.updateApiKeys(baseURL: baseURL, keys: keys, password: password)
+            await refreshApiKeys(baseURL: baseURL, password: password)
         } catch {
             logger.error("Update API keys failed: \(error.localizedDescription)")
         }
@@ -57,30 +56,10 @@ final class ManagementViewModel: ObservableObject {
         }
     }
 
-    func refreshStrategies(baseURL: URL, password: String?) async {
-        strategiesState = .loading
-        do {
-            let strategies = try await client.getStrategies(baseURL: baseURL, password: password)
-            strategiesState = .loaded(strategies)
-        } catch {
-            strategiesState = .error(error.localizedDescription)
-        }
-    }
-
-    func updateStrategy(baseURL: URL, strategy: String, password: String?) async {
-        do {
-            let updated = try await client.updateStrategy(baseURL: baseURL, strategy: strategy, password: password)
-            strategiesState = .loaded(updated)
-        } catch {
-            logger.error("Update strategy failed: \(error.localizedDescription)")
-        }
-    }
-
     func refreshAll(baseURL: URL, password: String?) async {
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.checkHealth(baseURL: baseURL, password: password) }
             group.addTask { await self.refreshApiKeys(baseURL: baseURL, password: password) }
-            group.addTask { await self.refreshStrategies(baseURL: baseURL, password: password) }
         }
     }
 }

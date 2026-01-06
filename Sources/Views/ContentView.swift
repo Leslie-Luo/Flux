@@ -26,6 +26,8 @@ struct ContentView: View {
             OverviewView()
         case .providers:
             ProvidersView()
+        case .authFiles:
+            AuthFilesView()
         case .agents:
             PlaceholderView(item: .agents)
         case .settings:

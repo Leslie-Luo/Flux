@@ -6,6 +6,7 @@ struct FluxApp: App {
     @StateObject private var appSettings = AppSettings()
     @StateObject private var runtimeService = CLIProxyAPIRuntimeService()
     @StateObject private var updateService = UpdateService()
+    @StateObject private var proxyCoordinator = ManagedProxyCoordinator()
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -96,6 +97,7 @@ struct FluxApp: App {
                 .environmentObject(appSettings)
                 .environmentObject(runtimeService)
                 .environmentObject(updateService)
+                .environmentObject(proxyCoordinator)
         }
         .defaultSize(width: 980, height: 680)
         .commands {

@@ -2,142 +2,286 @@ import SwiftUI
 
 struct ProvidersView: View {
     @EnvironmentObject var appSettings: AppSettings
-    @EnvironmentObject var runtimeService: CLIProxyAPIRuntimeService
-    @StateObject private var viewModel = ManagementViewModel()
-    
+    @StateObject private var viewModel = ProvidersViewModel()
+    @State private var isRefreshing = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Provider 管理")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                // Connection Status
-                GroupBox("连接状态") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            connectionStatusIcon
-                            connectionStatusText
-                            Spacer()
-                            Button("刷新") {
-                                Task {
-                                    await viewModel.checkHealth(baseURL: appSettings.managementBaseURL, password: appSettings.managementPassword)
-                                }
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        
-                        if case .loaded(let health) = viewModel.healthState {
-                            Divider()
-                            HStack {
-                                if let version = health.version {
-                                    Text("版本: \(version)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                if let uptime = health.uptime {
-                                    Text("运行时间: \(formatUptime(uptime))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
+                headerView
+
+                if isRefreshing {
+                    ProgressView("刷新中...")
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding()
+                }
+
+                providerSection(
+                    title: "Gemini",
+                    icon: "sparkles",
+                    countText: viewModel.geminiKeysState.countText,
+                    state: viewModel.geminiKeysState,
+                    content: { keys in
+                        ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
+                            ProviderKeyRow(
+                                apiKey: key.apiKey,
+                                baseUrl: key.baseUrl,
+                                proxyUrl: key.proxyUrl,
+                                excludedModels: key.excludedModels
+                            )
                         }
                     }
-                    .padding(.vertical, 8)
-                }
-                
-                // Management Port Config
-                GroupBox("Management API") {
-                    HStack {
-                        Text("端口:")
-                        TextField(
-                            "8081",
-                            value: Binding(
-                                get: { appSettings.managementPort },
-                                set: { appSettings.managementPort = $0 }
-                            ),
-                            format: .number
-                        )
-                        .frame(width: 80)
-                        .textFieldStyle(.roundedBorder)
-                        
-                        Text("(\(appSettings.managementBaseURL.absoluteString))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                )
+
+                providerSection(
+                    title: "Codex",
+                    icon: "cube.fill",
+                    countText: viewModel.codexKeysState.countText,
+                    state: viewModel.codexKeysState,
+                    content: { keys in
+                        ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
+                            ProviderKeyRow(
+                                apiKey: key.apiKey,
+                                baseUrl: key.baseUrl,
+                                proxyUrl: key.proxyUrl,
+                                excludedModels: key.excludedModels
+                            )
+                        }
                     }
-                    .padding(.vertical, 8)
-                }
-                
-                // Placeholder for accounts (S4.2)
-                GroupBox("账号列表") {
-                    Text("账号管理功能即将上线")
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 8)
-                }
+                )
+
+                providerSection(
+                    title: "Claude",
+                    icon: "brain.head.profile",
+                    countText: viewModel.claudeKeysState.countText,
+                    state: viewModel.claudeKeysState,
+                    content: { keys in
+                        ForEach(Array(keys.enumerated()), id: \.offset) { index, key in
+                            ProviderKeyRow(
+                                apiKey: key.apiKey,
+                                baseUrl: key.baseUrl,
+                                proxyUrl: key.proxyUrl,
+                                excludedModels: key.excludedModels
+                            )
+                        }
+                    }
+                )
+
+                providerSection(
+                    title: "OpenAI Compatibility",
+                    icon: "network",
+                    countText: viewModel.openAICompatState.countText,
+                    state: viewModel.openAICompatState,
+                    content: { entries in
+                        ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                            OpenAICompatRow(entry: entry)
+                        }
+                    }
+                )
             }
-            .padding(24)
+            .padding()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
-            await viewModel.checkHealth(baseURL: appSettings.managementBaseURL, password: appSettings.managementPassword)
+            await viewModel.refreshAll(baseURL: appSettings.managementBaseURL, password: appSettings.managementPassword)
         }
     }
-    
+
     @ViewBuilder
-    private var connectionStatusIcon: some View {
-        switch viewModel.healthState {
-        case .idle, .loading:
-            ProgressView()
-                .scaleEffect(0.7)
-        case .loaded(let health) where health.status == "ok":
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case .loaded:
-            Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.orange)
-        case .error:
-            Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(.red)
+    private var headerView: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Providers")
+                    .font(.system(size: 34, weight: .bold))
+                Text("管理 AI 提供商配置")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+
+            Button(action: refreshProviders) {
+                HStack {
+                    Image(systemName: "arrow.clockwise")
+                    Text("刷新")
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(isRefreshing)
         }
     }
-    
-    @ViewBuilder
-    private var connectionStatusText: some View {
-        switch viewModel.healthState {
-        case .idle:
-            Text("未检测")
+
+    private func refreshProviders() {
+        isRefreshing = true
+        Task {
+            await viewModel.refreshAll(baseURL: appSettings.managementBaseURL, password: appSettings.managementPassword)
+            isRefreshing = false
+        }
+    }
+}
+
+@ViewBuilder
+private func providerSection<T>(
+    title: String,
+    icon: String,
+    countText: String,
+    state: LoadState<[T]>,
+    @ViewBuilder content: @escaping ([T]) -> some View
+) -> some View {
+    GroupBox {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(title, systemImage: icon)
+                    .font(.headline)
+                Spacer()
+                Text(countText)
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
+
+            Divider()
+
+            switch state {
+            case .idle:
+                EmptyView()
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+            case .loaded(let items) where items.isEmpty:
+                VStack {
+                    Image(systemName: "tray")
+                        .font(.system(size: 32))
+                    Text("暂无配置")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding()
+            case .loaded(let items):
+                VStack(alignment: .leading, spacing: 8) {
+                    content(items)
+                }
+            case .error(let message):
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                        .font(.system(size: 24))
+                    Text("加载失败")
+                        .font(.headline)
+                        .foregroundStyle(.red)
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding()
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+@ViewBuilder
+private func ProviderKeyRow(
+    apiKey: String?,
+    baseUrl: String?,
+    proxyUrl: String?,
+    excludedModels: [String]?
+) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+        if let key = apiKey, !key.isEmpty {
+            HStack {
+                Text(maskApiKey(key))
+                    .font(.system(.caption, design: .monospaced))
+                    .lineLimit(1)
+                Spacer()
+            }
+        }
+
+        if let url = baseUrl, !url.isEmpty {
+            Text(url)
+                .font(.caption)
                 .foregroundStyle(.secondary)
-        case .loading:
-            Text("正在连接...")
+                .lineLimit(1)
+        }
+
+        if let proxy = proxyUrl, !proxy.isEmpty {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.triangle.2.circlepath.doc.on.clipboard")
+                    .font(.caption2)
+                Text(proxy)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+
+        if let models = excludedModels, !models.isEmpty {
+            HStack(spacing: 4) {
+                Image(systemName: "minus.circle")
+                    .font(.caption2)
+                    Text("排除: \(models.prefix(3).joined(separator: ", "))\(models.count > 3 ? " ..." : "")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+    .padding(.vertical, 4)
+}
+
+@ViewBuilder
+private func OpenAICompatRow(entry: OpenAICompatibilityEntry) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+        HStack {
+            Text(entry.name ?? "Unknown")
+                .font(.caption)
+                .fontWeight(.medium)
+            Spacer()
+            if let entries = entry.apiKeyEntries {
+                Image(systemName: "key.fill")
+                    .font(.caption2)
+                Text("\(entries.count)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        if let url = entry.baseUrl, !url.isEmpty {
+            Text(url)
+                .font(.caption)
                 .foregroundStyle(.secondary)
-        case .loaded(let health):
-            Text(health.status == "ok" ? "已连接" : health.status)
-                .foregroundStyle(health.status == "ok" ? .green : .orange)
-        case .error(let message):
-            VStack(alignment: .leading) {
-                Text("连接失败")
-                    .foregroundStyle(.red)
-                Text(message)
+                .lineLimit(1)
+        }
+
+        if let models = entry.models, !models.isEmpty {
+            HStack(spacing: 4) {
+                Image(systemName: "cube")
+                    .font(.caption2)
+                Text("\(models.count) models")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
     }
-    
-    private func formatUptime(_ seconds: TimeInterval) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = (Int(seconds) % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(minutes)m"
-        }
-    }
+    .padding(.vertical, 4)
+}
+
+@ViewBuilder
+private func Dot(color: Color) -> some View {
+    Circle()
+        .fill(color)
+        .frame(width: 6, height: 6)
+}
+
+private func maskApiKey(_ key: String) -> String {
+    guard key.count > 8 else { return "***" }
+    let prefix = String(key.prefix(4))
+    let suffix = String(key.suffix(4))
+    return "\(prefix)...\(suffix)"
 }
 
 #Preview {
     ProvidersView()
         .environmentObject(AppSettings())
-        .environmentObject(CLIProxyAPIRuntimeService())
 }
-

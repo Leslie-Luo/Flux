@@ -3,7 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var appSettings: AppSettings
     @EnvironmentObject var runtimeService: CLIProxyAPIRuntimeService
-    @StateObject private var coordinator = ManagedProxyCoordinator()
+    @EnvironmentObject var proxyCoordinator: ManagedProxyCoordinator
     @State private var showingConfigPicker = false
     @State private var portString = ""
 
@@ -138,8 +138,8 @@ struct SettingsView: View {
         .task {
             portString = String(appSettings.cliProxyAPIPort)
 
-            await coordinator.refresh()
-            await coordinator.checkForUpdate()
+            await proxyCoordinator.refresh()
+            await proxyCoordinator.checkForUpdate()
         }
     }
 
@@ -152,25 +152,25 @@ struct SettingsView: View {
                         Text("当前版本")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(coordinator.currentVersion.map { "v\($0)" } ?? "未安装")
+                        Text(proxyCoordinator.currentVersion.map { "v\($0)" } ?? "未安装")
                             .font(.headline)
                     }
 
                     Spacer()
 
                     Button("检查更新") {
-                        Task { await coordinator.checkForUpdate() }
+                        Task { await proxyCoordinator.checkForUpdate() }
                     }
                     .buttonStyle(.bordered)
-                    .disabled(coordinator.isCheckingUpdate || coordinator.isInstalling)
+                    .disabled(proxyCoordinator.isCheckingUpdate || proxyCoordinator.isInstalling)
                 }
 
-                if coordinator.isCheckingUpdate {
+                if proxyCoordinator.isCheckingUpdate {
                     ProgressView()
                         .scaleEffect(0.8)
                 }
 
-                if let latest = coordinator.availableLatest {
+                if let latest = proxyCoordinator.availableLatest {
                     Divider()
 
                     HStack(alignment: .top, spacing: 12) {
@@ -184,13 +184,13 @@ struct SettingsView: View {
 
                         Spacer()
 
-                        let isUpdateAvailable = latest.versionNumber != coordinator.currentVersion
+                        let isUpdateAvailable = latest.versionNumber != proxyCoordinator.currentVersion
                         if isUpdateAvailable {
-                            Button(coordinator.currentVersion == nil ? "安装" : "更新") {
+                            Button(proxyCoordinator.currentVersion == nil ? "安装" : "更新") {
                                 Task { await installAndMaybeRestart(release: latest) }
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(coordinator.isInstalling)
+                            .disabled(proxyCoordinator.isInstalling)
                         } else {
                             Text("已是最新")
                                 .font(.caption)
@@ -199,14 +199,14 @@ struct SettingsView: View {
                     }
                 }
 
-                if coordinator.isInstalling, let progress = coordinator.downloadProgress {
+                if proxyCoordinator.isInstalling, let progress = proxyCoordinator.downloadProgress {
                     ProgressView(value: progress.fractionCompleted)
                     Text(progress.formattedProgress)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
-                if let message = coordinator.error, !message.isEmpty {
+                if let message = proxyCoordinator.error, !message.isEmpty {
                     Text(message)
                         .font(.caption)
                         .foregroundStyle(.red)
@@ -214,13 +214,13 @@ struct SettingsView: View {
 
                 Divider()
 
-                if coordinator.installedVersions.isEmpty {
+                if proxyCoordinator.installedVersions.isEmpty {
                     Text("暂无已安装版本")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
-                        ForEach(coordinator.installedVersions) { version in
+                        ForEach(proxyCoordinator.installedVersions) { version in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("v\(version.version)")
@@ -234,7 +234,7 @@ struct SettingsView: View {
 
                                 Spacer()
 
-                                if version.version == coordinator.currentVersion {
+                                if version.version == proxyCoordinator.currentVersion {
                                     Text("当前")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -245,7 +245,7 @@ struct SettingsView: View {
                                     .buttonStyle(.bordered)
 
                                     Button("删除") {
-                                        Task { await coordinator.delete(version: version.version) }
+                                        Task { await proxyCoordinator.delete(version: version.version) }
                                     }
                                     .buttonStyle(.bordered)
                                     .tint(.red)
@@ -270,7 +270,7 @@ struct SettingsView: View {
             await runtimeService.stop()
         }
 
-        await coordinator.activate(version: version)
+        await proxyCoordinator.activate(version: version)
 
         guard wasRunning, let path = ProxyStorageManager.shared.currentBinaryPath?.path else { return }
         await runtimeService.start(
@@ -286,7 +286,7 @@ struct SettingsView: View {
             await runtimeService.stop()
         }
 
-        await coordinator.install(release: release)
+        await proxyCoordinator.install(release: release)
 
         guard wasRunning, let path = ProxyStorageManager.shared.currentBinaryPath?.path else { return }
         await runtimeService.start(
@@ -353,4 +353,5 @@ struct SettingsView: View {
     SettingsView()
         .environmentObject(AppSettings())
         .environmentObject(CLIProxyAPIRuntimeService())
+        .environmentObject(ManagedProxyCoordinator())
 }
